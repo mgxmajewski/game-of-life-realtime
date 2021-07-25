@@ -1,26 +1,57 @@
-const {GraphQLServer} = require('graphql-yoga');
+const { GraphQLServer, PubSub } = require("graphql-yoga");
 
-const states = []
+const states = [];
 
 const typeDefs = `
-    type State {
+  type State {
     id: ID!
-    grid: Array!
-    }
-    
-    type Query {
-        states: [State!]
-}
+    user: String!
+    grid: [[String]]!
+  }
+  type Query {
+    states: [State!]
+  }
+  type Mutation {
+    postState(user: String!, grid: [[String]]!): ID!
+  }
+  type Subscription {
+    states: [State!]
+  }
 `;
+
+const subscribers = [];
+const onstatesUpdates = (fn) => subscribers.push(fn);
 
 const resolvers = {
     Query: {
         states: () => states,
-    }
-}
+    },
+    Mutation: {
+        postState: (parent, { user, grid }) => {
+            const id = states.length;
+            states.push({
+                id,
+                user,
+                grid,
+            });
+            subscribers.forEach((fn) => fn());
+            return id;
+        },
+    },
+    Subscription: {
+        states: {
+            subscribe: (parent, args, { pubsub }) => {
+                const channel = Math.random().toString(36).slice(2, 15);
+                onstatesUpdates(() => pubsub.publish(channel, { states }));
+                setTimeout(() => pubsub.publish(channel, { states }), 0);
+                return pubsub.asyncIterator(channel);
+            },
+        },
+    },
+};
 
-const server = new GraphQLServer({typeDefs, resolvers});
-server.start(({port}) =>{
-    console.log(`Server started on http://localhost:${port}`)
+const pubsub = new PubSub();
+const server = new GraphQLServer({ typeDefs, resolvers, context: { pubsub } });
+server.start(({ port }) => {
+    console.log(`Server on http://localhost:${port}/`);
 });
-
