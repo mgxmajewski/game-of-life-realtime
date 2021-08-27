@@ -1,6 +1,7 @@
 const { GraphQLServer, PubSub } = require("graphql-yoga");
 
 const states = [];
+const statesArraySize = 3
 
 const typeDefs = `
   type State {
@@ -13,6 +14,7 @@ const typeDefs = `
   }
   type Mutation {
     postState(user: String!, grid: [[String]]!): ID!
+    deleteState: String!
   }
   type Subscription {
     states: [State!]
@@ -36,6 +38,13 @@ const resolvers = {
             });
             subscribers.forEach((fn) => fn());
             return id;
+        },
+        deleteState: () => {
+            const currentSize = states.length;
+            if (currentSize > statesArraySize)
+                states.shift ();
+            subscribers.forEach((fn) => fn());
+            return currentSize;
         },
     },
     Subscription: {
