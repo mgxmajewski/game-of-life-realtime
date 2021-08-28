@@ -22,7 +22,7 @@ const typeDefs = `
 `;
 
 const subscribers = [];
-const onstatesUpdates = (fn) => subscribers.push(fn);
+const onStatesUpdates = (fn) => subscribers.push(fn);
 
 const resolvers = {
     Query: {
@@ -50,7 +50,7 @@ const resolvers = {
         states: {
             subscribe: (parent, args, { pubsub }) => {
                 const channel = Math.random().toString(36).slice(2, 15);
-                onstatesUpdates(() => pubsub.publish(channel, { states }));
+                onStatesUpdates(() => pubsub.publish(channel, { states }));
                 setTimeout(() => pubsub.publish(channel, { states }), 0);
                 return pubsub.asyncIterator(channel);
             },
