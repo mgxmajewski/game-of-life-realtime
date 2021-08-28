@@ -14,7 +14,7 @@ const typeDefs = `
   }
   type Mutation {
     postState(user: String!, grid: [[String]]!): ID!
-    deleteState: String!
+    getStatesLength: String!
   }
   type Subscription {
     states: [State!]
