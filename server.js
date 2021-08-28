@@ -1,6 +1,6 @@
 const { GraphQLServer, PubSub } = require("graphql-yoga");
 
-const states = [];
+const states = [{},{},{}];
 const statesArraySize = 3
 
 const typeDefs = `
@@ -29,8 +29,9 @@ const resolvers = {
         states: () => states,
     },
     Mutation: {
-        postState: (parent, { user, grid }) => {
+        postState: async (parent, { user, grid }) => {
             const id = states.length;
+            states.shift()
             states.push({
                 id,
                 user,
