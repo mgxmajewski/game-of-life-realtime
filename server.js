@@ -1,7 +1,8 @@
 const { GraphQLServer, PubSub } = require("graphql-yoga");
 
-const states = [{},{},{}];
-const statesArraySize = 3
+const statesArraySize = 5
+const states = new Array(statesArraySize);
+
 
 const typeDefs = `
   type State {
