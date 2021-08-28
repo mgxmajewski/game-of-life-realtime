@@ -40,10 +40,8 @@ const resolvers = {
             subscribers.forEach((fn) => fn());
             return id;
         },
-        deleteState: () => {
+        getStatesLength: () => {
             const currentSize = states.length;
-            if (currentSize > statesArraySize)
-                states.shift ();
             subscribers.forEach((fn) => fn());
             return currentSize;
         },
