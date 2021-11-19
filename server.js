@@ -30,14 +30,16 @@ const resolvers = {
         states: () => states,
     },
     Mutation: {
-        postState: async (parent, { user, grid }) => {
+        postState: async (parent, { user, grid }, { req, url } ) => {
             const id = states.length;
             states.shift()
             states.push({
                 id,
                 user,
-                grid,
+                grid
             });
+            console.log(url)
+            console.log(req.headers.authorization)
             subscribers.forEach((fn) => fn());
             return id;
         },
@@ -45,7 +47,7 @@ const resolvers = {
             const currentSize = states.length;
             subscribers.forEach((fn) => fn());
             return currentSize;
-        },
+        }
     },
     Subscription: {
         states: {
@@ -60,7 +62,15 @@ const resolvers = {
 };
 
 const pubsub = new PubSub();
-const server = new GraphQLServer({ typeDefs, resolvers, context: { pubsub } });
+const server = new GraphQLServer({
+    typeDefs,
+    resolvers,
+     context: ({ request, response }) => ({
+      url: request ? request.protocol + "://" + request.get("host") : "",
+      req: request,
+      res: response,
+      pubsub
+    }) });
 server.start(({ port }) => {
     console.log(`Server on http://localhost:${port}/`);
 });
