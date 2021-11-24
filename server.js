@@ -1,11 +1,14 @@
 const {GraphQLServer, PubSub} = require("graphql-yoga");
 const Jwt = require('jsonwebtoken');
-const { AuthenticationError } = require("apollo-server-core");
+const {AuthenticationError} = require("apollo-server-core");
+const {stateInitializer, initialGrid} = require("./utils");
 // import * as jwt from "jsonwebtoken";
 
-const statesArraySize = 5
+const statesArraySize = 4
 const states = new Array(statesArraySize);
 
+// Initialize state for user.
+stateInitializer(states, initialGrid)
 
 const typeDefs = `
   type State {
@@ -71,11 +74,9 @@ const authenticate = async (resolve, root, args, context, info) => {
     let token;
 
     try {
-        console.log(subToken)
 
-        if (subToken){
-            console.log('subToken')
-            token = Jwt.verify(subToken,"NeverShareYourSecret")
+        if (subToken) {
+            token = Jwt.verify(subToken, "NeverShareYourSecret")
         } else {
             console.log('reqToken')
             token = Jwt.verify(context.req.get("Authorization"), "NeverShareYourSecret");
@@ -84,8 +85,7 @@ const authenticate = async (resolve, root, args, context, info) => {
         return new AuthenticationError("Not authorised");
     }
     context.claims = token.claims;
-    const result = await resolve(root, args, context, info);
-    return result;
+    return await resolve(root, args, context, info);
 };
 
 const pubsub = new PubSub();
@@ -102,16 +102,15 @@ const server = new GraphQLServer({
 });
 
 const options = {
-  port: 4000,
-  subscriptions: {
-    onConnect: async (connectionParams, webSocket) => {
-       subToken = connectionParams.Authorization
-      // console.log(`connectionParams: ${JSON.stringify(connectionParams)}`)
-      // console.log(`webSocket: ${JSON.stringify(webSocket)}`)
+    port: 4000,
+    subscriptions: {
+        onConnect: async (connectionParams, webSocket) => {
+            subToken = await connectionParams.Authorization
+            console.log(subToken)
+        },
     },
-  },
 };
 
-server.start(options,({port}) => {
+server.start(options, ({port}) => {
     console.log(`Server on http://localhost:${port}/`);
 });
