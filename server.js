@@ -1,10 +1,11 @@
+require('dotenv').config();
 const {GraphQLServer, PubSub} = require("graphql-yoga");
 const Jwt = require('jsonwebtoken');
 const {AuthenticationError} = require("apollo-server-core");
 const {stateInitializer, initialGrid} = require("./utils");
 // import * as jwt from "jsonwebtoken";
 
-const statesArraySize = 4
+const statesArraySize = 1
 const states = new Array(statesArraySize);
 
 // Initialize state for user.
@@ -67,24 +68,24 @@ const resolvers = {
     },
 };
 
-let subToken
+let currentSubscriptionToken;
+const subscriptionToken = (connectionParams) => connectionParams.Authorization
+const httpRequestToken = (ctx) => ctx.req.get("Authorization")
 
+const verifyToken = (token) => Jwt.verify(token, process.env.SECRET)
 
 const authenticate = async (resolve, root, args, context, info) => {
-    let token;
-
+    let authorisedToken;
     try {
-
-        if (subToken) {
-            token = Jwt.verify(subToken, "NeverShareYourSecret")
-        } else {
-            console.log('reqToken')
-            token = Jwt.verify(context.req.get("Authorization"), "NeverShareYourSecret");
-        }
+       if (currentSubscriptionToken) {
+           authorisedToken = verifyToken(currentSubscriptionToken)
+       } else {
+           authorisedToken = verifyToken(httpRequestToken(context))
+       }
     } catch (e) {
         return new AuthenticationError("Not authorised");
     }
-    context.claims = token.claims;
+    context.claims = authorisedToken.claims;
     return await resolve(root, args, context, info);
 };
 
@@ -105,11 +106,11 @@ const options = {
     port: 4000,
     subscriptions: {
         onConnect: async (connectionParams, webSocket) => {
-            subToken = await connectionParams.Authorization
-            console.log(subToken)
+            currentSubscriptionToken = await subscriptionToken(connectionParams)
         },
     },
 };
+
 
 server.start(options, ({port}) => {
     console.log(`Server on http://localhost:${port}/`);
