@@ -5,11 +5,10 @@ const {AuthenticationError} = require("apollo-server-core");
 const {stateInitializer, initialGrid} = require("./utils");
 // import * as jwt from "jsonwebtoken";
 
-const statesArraySize = 1
-const states = new Array(statesArraySize);
+const initialStatesArraySize = 1
+const states = new Array(initialStatesArraySize);
 
 // Initialize state for user.
-stateInitializer(states, initialGrid)
 
 const typeDefs = `
   type State {
@@ -38,15 +37,15 @@ const resolvers = {
     },
     Mutation: {
         postState: async (parent, {user, grid}, {req, url}) => {
-            const id = states.length;
+            const token = req.headers.authorization
+            const {id} = verifyToken(token);
+            console.log(id)
             states.shift()
             states.push({
                 id,
                 user,
                 grid
             });
-            console.log(url)
-            console.log(req.headers.authorization)
             subscribers.forEach((fn) => fn());
             return id;
         },
@@ -69,23 +68,28 @@ const resolvers = {
 };
 
 let currentSubscriptionToken;
+let authorisedToken;
 const subscriptionToken = (connectionParams) => connectionParams.Authorization
-const httpRequestToken = (ctx) => ctx.req.get("Authorization")
+const mutationToken = (ctx) => ctx.req.get("Authorization")
 
 const verifyToken = (token) => Jwt.verify(token, process.env.SECRET)
 
 const authenticate = async (resolve, root, args, context, info) => {
-    let authorisedToken;
     try {
-       if (currentSubscriptionToken) {
-           authorisedToken = verifyToken(currentSubscriptionToken)
-       } else {
-           authorisedToken = verifyToken(httpRequestToken(context))
-       }
+        if (currentSubscriptionToken) {
+            authorisedToken = verifyToken(currentSubscriptionToken)
+        } else {
+            authorisedToken = verifyToken(mutationToken(context))
+        }
     } catch (e) {
         return new AuthenticationError("Not authorised");
     }
     context.claims = authorisedToken.claims;
+    if (states.length === initialStatesArraySize) {
+        console.log('initialization')
+        stateInitializer(states, initialGrid, authorisedToken.id)
+    }
+
     return await resolve(root, args, context, info);
 };
 

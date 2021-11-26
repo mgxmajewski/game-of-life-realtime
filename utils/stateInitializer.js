@@ -1,11 +1,12 @@
 /**
  * @param array
  * @param initialGrid
+ * @param userID
  */
-exports.stateInitializer = (array, initialGrid) => {
+exports.stateInitializer = (array, initialGrid, userID) => {
     array.push(
         {
-            id: 0,
+            id: userID,
             user: 'Server Starter',
             grid: initialGrid
         }
