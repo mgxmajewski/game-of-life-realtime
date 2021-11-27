@@ -105,7 +105,8 @@ const server = new GraphQLServer({
     }),
     middlewares: [{
         Query: authenticate,
-        Mutation: authenticate
+        Mutation: authenticate,
+        Subscription: authenticate
     }]
 });
 
