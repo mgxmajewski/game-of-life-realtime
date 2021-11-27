@@ -103,7 +103,10 @@ const server = new GraphQLServer({
         res: response,
         pubsub
     }),
-    middlewares: [authenticate]
+    middlewares: [{
+        Query: authenticate,
+        Mutation: authenticate
+    }]
 });
 
 const options = {
