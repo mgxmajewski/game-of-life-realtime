@@ -1,22 +1,25 @@
 require('dotenv').config();
 const {GraphQLServer, PubSub, withFilter} = require("graphql-yoga");
 const Jwt = require('jsonwebtoken');
-const {AuthenticationError, gql} = require("apollo-server-core");
+const {AuthenticationError, gql, ApolloServerPluginInlineTrace} = require("apollo-server-core");
 const {stateInitializer, initialGrid} = require("./utils");
 // import * as jwt from "jsonwebtoken";
 
 const initialStatesArraySize = 1
 const states = new Array(initialStatesArraySize);
-// stateInitializer(states, initialGrid, 9)
 // Initialize state for user.
 
 const typeDefs = gql`
+    type Session {
+        state: [[String]]!
+    }
     type State {
         id: ID!
         grid: [[String]]!
     }
     type Query {
         states: [State!]
+        session(id: String): Session
     }
     type Mutation {
         postState(grid: [[String]]!): ID!
@@ -27,23 +30,27 @@ const typeDefs = gql`
     }
 `;
 
+const sessions = {}
+
 const subscribers = [];
 const onStatesUpdates = (fn) => subscribers.push(fn);
 
 const resolvers = {
     Query: {
         states: () => states,
+        session: (_, {id}) => {
+        return sessions[id];
+      }
     },
     Mutation: {
         postState: async (parent, {grid}, {req, url}) => {
             const token = req.headers.authorization
             const {id} = verifyToken(token);
             console.log(id)
-            states.shift()
-            states.push({
-                id,
-                grid
-            });
+            sessions[id] = {
+                state: grid
+            }
+            console.log(sessions)
             subscribers.forEach((fn) => fn());
             return id;
         },
@@ -98,9 +105,11 @@ const authenticate = async (resolve, root, args, context, info) => {
         return new AuthenticationError("Not authorised");
     }
     context.claims = authorisedToken.claims;
-    if (states.length === initialStatesArraySize) {
+    if (!sessions[authorisedToken.id]) {
         console.log('initialization')
-        stateInitializer(states, initialGrid, authorisedToken.id)
+        sessions[authorisedToken.id] = {
+            state: initialGrid
+        }
     }
 
     return await resolve(root, args, context, info);
@@ -116,6 +125,7 @@ const server = new GraphQLServer({
         res: response,
         pubsub
     }),
+    plugins: [ApolloServerPluginInlineTrace()],
     middlewares: [{
         Query: authenticate,
         Mutation: authenticate,
