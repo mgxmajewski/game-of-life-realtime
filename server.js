@@ -1,5 +1,5 @@
 require('dotenv').config();
-const {GraphQLServer, PubSub} = require("graphql-yoga");
+const {GraphQLServer, PubSub, withFilter} = require("graphql-yoga");
 const Jwt = require('jsonwebtoken');
 const {AuthenticationError} = require("apollo-server-core");
 const {stateInitializer, initialGrid} = require("./utils");
@@ -7,7 +7,7 @@ const {stateInitializer, initialGrid} = require("./utils");
 
 const initialStatesArraySize = 1
 const states = new Array(initialStatesArraySize);
-
+// stateInitializer(states, initialGrid, 9)
 // Initialize state for user.
 
 const typeDefs = `
@@ -24,7 +24,7 @@ const typeDefs = `
     getStatesLength: String!
   }
   type Subscription {
-    states: [State!]
+    states(userId: Int!): [State!]
   }
 `;
 
@@ -57,15 +57,30 @@ const resolvers = {
     },
     Subscription: {
         states: {
-            subscribe: (parent, args, {pubsub}) => {
-                const channel = Math.random().toString(36).slice(2, 15);
-                onStatesUpdates(() => pubsub.publish(channel, {states}));
-                setTimeout(() => pubsub.publish(channel, {states}), 0);
-                return pubsub.asyncIterator(channel);
-            },
+            subscribe: withFilter(
+                (parent, args, {pubsub}) => {
+                    const channel = Math.random().toString(36).slice(2, 15);
+                    // console.log(`states: ${states}, channel: ${channel}, subscribers: ${subscribers.length}`)
+                    onStatesUpdates(() => pubsub.publish(channel, {states}));
+                    setTimeout(() => pubsub.publish(channel, {states}), 0);
+                    return pubsub.asyncIterator(channel)
+                },
+                (payload, variables) => {
+                    // console.log(`payload: ${JSON.stringify(payload.states[payload.states.length - 1].id)}`)
+                    // console.log(`variables: ${JSON.stringify(variables.userId)}`)
+                    // // console.log(typeof payload.states[payload.states.length - 1].id)
+                    // // console.log(typeof variables.userId)
+                    // console.log(payload.states[payload.states.length - 1].id === variables.userId)
+                    // console.log(payload.states)
+                    // console.log(variables.userId)
+                    // console.log(variables.userId in payload.states)
+                    return payload.states[payload.states.length - 1].id === variables.userId;
+                }
+            ),
         },
     },
 };
+
 
 let currentSubscriptionToken;
 let authorisedToken;
