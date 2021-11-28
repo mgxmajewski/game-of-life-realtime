@@ -11,22 +11,23 @@ const states = new Array(initialStatesArraySize);
 
 const typeDefs = gql`
     type Session {
-        state: [[String]]!
+        state: [[String]]
     }
     type State {
         id: ID!
         grid: [[String]]!
     }
     type Query {
-        states: [State!]
-        session(id: String): Session
+        #        states: [State!]
+        sessions(id: String): Session
     }
     type Mutation {
         postState(grid: [[String]]!): ID!
         getStatesLength: String!
     }
     type Subscription {
-        states(userId: Int!): [State!]
+        #        states(userId: Int!): [State!]
+        sessions(id: Int!): Session
     }
 `;
 
@@ -37,19 +38,23 @@ const onStatesUpdates = (fn) => subscribers.push(fn);
 
 const resolvers = {
     Query: {
-        states: () => states,
-        session: (_, {id}) => {
-        return sessions[id];
-      }
+        // states: () => states,
+        sessions: (_, {id}) => {
+            return sessions[id];
+        }
     },
     Mutation: {
         postState: async (parent, {grid}, {req, url}) => {
             const token = req.headers.authorization
             const {id} = verifyToken(token);
             console.log(id)
-            sessions[id] = {
-                state: grid
+            if (sessions[id] === undefined) {
+                console.log('initialization')
+                sessions[id] = {
+                    state: initialGrid
+                }
             }
+            sessions[id].state = grid
             console.log(sessions)
             subscribers.forEach((fn) => fn());
             return id;
@@ -61,27 +66,32 @@ const resolvers = {
         }
     },
     Subscription: {
-        states: {
-            subscribe: withFilter(
-                (parent, args, {pubsub}) => {
-                    const channel = Math.random().toString(36).slice(2, 15);
-                    // console.log(`states: ${states}, channel: ${channel}, subscribers: ${subscribers.length}`)
-                    onStatesUpdates(() => pubsub.publish(channel, {states}));
-                    setTimeout(() => pubsub.publish(channel, {states}), 0);
-                    return pubsub.asyncIterator(channel)
-                },
-                (payload, variables) => {
-                    // console.log(`payload: ${JSON.stringify(payload.states[payload.states.length - 1].id)}`)
-                    // console.log(`variables: ${JSON.stringify(variables.userId)}`)
-                    // // console.log(typeof payload.states[payload.states.length - 1].id)
-                    // // console.log(typeof variables.userId)
-                    // console.log(payload.states[payload.states.length - 1].id === variables.userId)
-                    // console.log(payload.states)
-                    // console.log(variables.userId)
-                    // console.log(variables.userId in payload.states)
-                    return payload.states[payload.states.length - 1].id === variables.userId;
-                }
-            ),
+        sessions: {
+            // resolve payload to publish
+            resolve: (payload, args) => {
+                return payload.sessions[`${args.id}`];
+            },
+            subscribe:
+                withFilter(
+                    (parent, args, {pubsub}) => {
+                        const channel = Math.random().toString(36).slice(2, 15);
+                        // console.log(`states: ${states}, channel: ${channel}, subscribers: ${subscribers.length}`)
+                        // console.log(`args: ${args.id}`)
+                        // console.log(`sessions: ${JSON.stringify(sessions)}`)
+                        // console.log(`sessions payload: ${JSON.stringify(sessions[`${args.id}`])}`)
+                        // onStatesUpdates(() => pubsub.publish(channel, sessions[`${args.id}`]));
+                        // setTimeout(() => pubsub.publish(channel, sessions[`${args.id}`]), 0);
+                        onStatesUpdates(() => pubsub.publish(channel, {sessions}));
+                        setTimeout(() => pubsub.publish(channel, {sessions}), 0);
+                        return pubsub.asyncIterator(channel)
+                    },
+                    // filter by id
+                    (payload, variables) => {
+                        // console.log(variables.id)
+                        // console.log(payload.sessions)
+                        return variables.id in payload.sessions
+                    }
+                )
         },
     },
 };
@@ -104,8 +114,9 @@ const authenticate = async (resolve, root, args, context, info) => {
     } catch (e) {
         return new AuthenticationError("Not authorised");
     }
-    context.claims = authorisedToken.claims;
-    if (!sessions[authorisedToken.id]) {
+    context.claims = authorisedToken;
+    console.log(sessions[authorisedToken.id] === undefined)
+    if (sessions[authorisedToken.id] === undefined) {
         console.log('initialization')
         sessions[authorisedToken.id] = {
             state: initialGrid
