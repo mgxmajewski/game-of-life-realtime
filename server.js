@@ -13,14 +13,13 @@ const states = new Array(initialStatesArraySize);
 const typeDefs = gql`
     type State {
         id: ID!
-        user: String!
         grid: [[String]]!
     }
     type Query {
         states: [State!]
     }
     type Mutation {
-        postState(user: String!, grid: [[String]]!): ID!
+        postState(grid: [[String]]!): ID!
         getStatesLength: String!
     }
     type Subscription {
@@ -36,14 +35,13 @@ const resolvers = {
         states: () => states,
     },
     Mutation: {
-        postState: async (parent, {user, grid}, {req, url}) => {
+        postState: async (parent, {grid}, {req, url}) => {
             const token = req.headers.authorization
             const {id} = verifyToken(token);
             console.log(id)
             states.shift()
             states.push({
                 id,
-                user,
                 grid
             });
             subscribers.forEach((fn) => fn());
