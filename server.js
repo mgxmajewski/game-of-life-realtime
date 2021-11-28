@@ -1,7 +1,7 @@
 require('dotenv').config();
 const {GraphQLServer, PubSub, withFilter} = require("graphql-yoga");
 const Jwt = require('jsonwebtoken');
-const {AuthenticationError} = require("apollo-server-core");
+const {AuthenticationError, gql} = require("apollo-server-core");
 const {stateInitializer, initialGrid} = require("./utils");
 // import * as jwt from "jsonwebtoken";
 
@@ -10,22 +10,22 @@ const states = new Array(initialStatesArraySize);
 // stateInitializer(states, initialGrid, 9)
 // Initialize state for user.
 
-const typeDefs = `
-  type State {
-    id: ID!
-    user: String!
-    grid: [[String]]!
-  }
-  type Query {
-    states: [State!]
-  }
-  type Mutation {
-    postState(user: String!, grid: [[String]]!): ID!
-    getStatesLength: String!
-  }
-  type Subscription {
-    states(userId: Int!): [State!]
-  }
+const typeDefs = gql`
+    type State {
+        id: ID!
+        user: String!
+        grid: [[String]]!
+    }
+    type Query {
+        states: [State!]
+    }
+    type Mutation {
+        postState(user: String!, grid: [[String]]!): ID!
+        getStatesLength: String!
+    }
+    type Subscription {
+        states(userId: Int!): [State!]
+    }
 `;
 
 const subscribers = [];
