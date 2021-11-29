@@ -91,11 +91,11 @@ const authenticate = async (resolve, root, args, context, info) => {
     } catch (e) {
         return new AuthenticationError("Not authorised");
     }
-    context.claims = authorisedToken;
-    console.log(sessions[authorisedToken.id] === undefined)
-    if (sessions[authorisedToken.id] === undefined) {
-        console.log('initialization')
-        sessions[authorisedToken.id] = {
+
+    // Create session's initial state for freshly logged in user
+    const { id } = authorisedToken
+    if (!sessions[id]) {
+        sessions[id] = {
             state: initialGrid
         }
     }
