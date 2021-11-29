@@ -2,7 +2,7 @@ require('dotenv').config();
 const {GraphQLServer, PubSub, withFilter} = require("graphql-yoga");
 const Jwt = require('jsonwebtoken');
 const {AuthenticationError, gql, ApolloServerPluginInlineTrace} = require("apollo-server-core");
-const {stateInitializer, initialGrid} = require("./utils");
+const {initialGrid} = require("./utils");
 // import * as jwt from "jsonwebtoken";
 
 const initialStatesArraySize = 1
