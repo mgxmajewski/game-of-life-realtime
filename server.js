@@ -47,13 +47,6 @@ const resolvers = {
         postState: async (parent, {grid}, {req, url}) => {
             const token = req.headers.authorization
             const {id} = verifyToken(token);
-            console.log(id)
-            if (sessions[id] === undefined) {
-                console.log('initialization')
-                sessions[id] = {
-                    state: initialGrid
-                }
-            }
             sessions[id].state = grid
             console.log(sessions)
             subscribers.forEach((fn) => fn());
@@ -67,32 +60,14 @@ const resolvers = {
     },
     Subscription: {
         sessions: {
-            // resolve payload to publish
-            resolve: (payload, args) => {
-                return payload.sessions[`${args.id}`];
-            },
-            subscribe:
-                withFilter(
-                    (parent, args, {pubsub}) => {
-                        const channel = Math.random().toString(36).slice(2, 15);
-                        // console.log(`states: ${states}, channel: ${channel}, subscribers: ${subscribers.length}`)
-                        // console.log(`args: ${args.id}`)
-                        // console.log(`sessions: ${JSON.stringify(sessions)}`)
-                        // console.log(`sessions payload: ${JSON.stringify(sessions[`${args.id}`])}`)
-                        // onStatesUpdates(() => pubsub.publish(channel, sessions[`${args.id}`]));
-                        // setTimeout(() => pubsub.publish(channel, sessions[`${args.id}`]), 0);
-                        onStatesUpdates(() => pubsub.publish(channel, {sessions}));
-                        setTimeout(() => pubsub.publish(channel, {sessions}), 0);
-                        return pubsub.asyncIterator(channel)
-                    },
-                    // filter by id
-                    (payload, variables) => {
-                        // console.log(variables.id)
-                        // console.log(payload.sessions)
-                        return variables.id in payload.sessions
-                    }
-                )
-        },
+            subscribe: (parent, args, {pubsub}) => {
+                const channel = Math.random().toString(36).slice(2, 15);
+                onStatesUpdates(() => pubsub.publish(channel, {sessions: sessions[args.id]}));
+                console.log(sessions[args.id])
+                setTimeout(() => pubsub.publish(channel, {sessions: sessions[args.id]}), 0);
+                return pubsub.asyncIterator(channel)
+            }
+        }
     },
 };
 
@@ -105,12 +80,14 @@ const mutationToken = (ctx) => ctx.req.get("Authorization")
 const verifyToken = (token) => Jwt.verify(token, process.env.SECRET)
 
 const authenticate = async (resolve, root, args, context, info) => {
+    console.log('popo')
     try {
         if (currentSubscriptionToken) {
             authorisedToken = verifyToken(currentSubscriptionToken)
         } else {
             authorisedToken = verifyToken(mutationToken(context))
         }
+        console.log(authorisedToken.id)
     } catch (e) {
         return new AuthenticationError("Not authorised");
     }
