@@ -7,6 +7,8 @@ const {initialGrid} = require("./utils");
 
 const initialStatesArraySize = 1
 const states = new Array(initialStatesArraySize);
+const channel = Math.random().toString(36).slice(2, 15);
+const sessions = {}
 // Initialize state for user.
 
 const typeDefs = gql`
@@ -32,11 +34,6 @@ const typeDefs = gql`
     }
 `;
 
-const sessions = {}
-
-const subscribers = [];
-const onStatesUpdates = (fn) => subscribers.push(fn);
-
 const resolvers = {
     Query: {
         // states: () => states,
@@ -51,13 +48,11 @@ const resolvers = {
             const {id} = verifyToken(token);
             sessions[id].id = id
             sessions[id].state = grid
-            console.log(sessions)
-            subscribers.forEach((fn) => fn());
+            pubsub.publish(channel, {sessions: sessions[id]})
             return id;
         },
         getStatesLength: () => {
             const currentSize = states.length;
-            subscribers.forEach((fn) => fn());
             return currentSize;
         }
     },
@@ -65,9 +60,6 @@ const resolvers = {
         sessions: {
             subscribe: withFilter(
                 (parent, args, {pubsub}) => {
-                    const channel = Math.random().toString(36).slice(2, 15);
-                    onStatesUpdates(() => pubsub.publish(channel, {sessions: sessions[args.id]}));
-                    console.log(sessions[args.id])
                     setTimeout(() => pubsub.publish(channel, {sessions: sessions[args.id]}), 0);
                     return pubsub.asyncIterator(channel)
                 },
@@ -139,7 +131,6 @@ const options = {
         },
     },
 };
-
 
 server.start(options, ({port}) => {
     console.log(`Server on http://localhost:${port}/`);
