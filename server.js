@@ -11,6 +11,7 @@ const states = new Array(initialStatesArraySize);
 
 const typeDefs = gql`
     type Session {
+        id: Int!
         state: [[String]]
     }
     type State {
@@ -45,8 +46,10 @@ const resolvers = {
     },
     Mutation: {
         postState: async (parent, {grid}, {req, url}) => {
+            console.log(req.body.variables.grid);
             const token = req.headers.authorization
             const {id} = verifyToken(token);
+            sessions[id].id = id
             sessions[id].state = grid
             console.log(sessions)
             subscribers.forEach((fn) => fn());
@@ -60,13 +63,19 @@ const resolvers = {
     },
     Subscription: {
         sessions: {
-            subscribe: (parent, args, {pubsub}) => {
-                const channel = Math.random().toString(36).slice(2, 15);
-                onStatesUpdates(() => pubsub.publish(channel, {sessions: sessions[args.id]}));
-                console.log(sessions[args.id])
-                setTimeout(() => pubsub.publish(channel, {sessions: sessions[args.id]}), 0);
-                return pubsub.asyncIterator(channel)
-            }
+            subscribe: withFilter(
+                (parent, args, {pubsub}) => {
+                    const channel = Math.random().toString(36).slice(2, 15);
+                    onStatesUpdates(() => pubsub.publish(channel, {sessions: sessions[args.id]}));
+                    console.log(sessions[args.id])
+                    setTimeout(() => pubsub.publish(channel, {sessions: sessions[args.id]}), 0);
+                    return pubsub.asyncIterator(channel)
+                },
+                // filter by id
+                (payload, variables) => {
+                    return variables.id === payload.sessions.id
+                }
+            )
         }
     },
 };
@@ -93,9 +102,10 @@ const authenticate = async (resolve, root, args, context, info) => {
     }
 
     // Create session's initial state for freshly logged in user
-    const { id } = authorisedToken
+    const {id} = authorisedToken
     if (!sessions[id]) {
         sessions[id] = {
+            id: id,
             state: initialGrid
         }
     }
