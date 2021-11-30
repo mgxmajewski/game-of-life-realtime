@@ -2,7 +2,7 @@
   "name": "server",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js --verbose"
   },
   "dependencies": {
     "apollo-server-core": "^3.5.0",
