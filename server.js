@@ -86,9 +86,9 @@ const authenticate = async (resolve, root, args, context, info) => {
         if (currentSubscriptionToken) {
             authorisedToken = verifyToken(currentSubscriptionToken)
         } else {
-            authorisedToken = verifyToken(mutationToken(context))
+            console.log("You need to login");
+            return new AuthenticationError("You need to login");
         }
-        console.log(authorisedToken.id)
     } catch (e) {
         return new AuthenticationError("Not authorised");
     }
