@@ -80,7 +80,7 @@ let currentSubscriptionToken;
 let authorisedToken;
 const subscriptionToken = (connectionParams) => connectionParams.Authorization
 
-const verifyToken = (token) => Jwt.verify(token, process.env.SECRET)
+const verifyToken = (token) => Jwt.verify(token, process.env.ACCESS_SECRET)
 
 const authenticate = async (resolve, root, args, context, info) => {
 
