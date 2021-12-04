@@ -3,7 +3,10 @@ const {GraphQLServer, PubSub, withFilter} = require("graphql-yoga");
 const Jwt = require('jsonwebtoken');
 const {AuthenticationError, gql, ApolloServerPluginInlineTrace} = require("apollo-server-core");
 const {initialGrid} = require("./utils");
-// import * as jwt from "jsonwebtoken";
+const Redis = require("ioredis");
+const jwt_decode = require("jwt-decode");
+
+const redis = new Redis();
 
 const initialStatesArraySize = 1
 const states = new Array(initialStatesArraySize);
@@ -76,14 +79,14 @@ const resolvers = {
 let currentSubscriptionToken;
 let authorisedToken;
 const subscriptionToken = (connectionParams) => connectionParams.Authorization
-const mutationToken = (ctx) => ctx.req.get("Authorization")
 
 const verifyToken = (token) => Jwt.verify(token, process.env.SECRET)
 
 const authenticate = async (resolve, root, args, context, info) => {
-    console.log('popo')
+
     try {
         if (currentSubscriptionToken) {
+            console.log(`currentSubscriptionToken: ` + currentSubscriptionToken);
             authorisedToken = verifyToken(currentSubscriptionToken)
         } else {
             console.log("You need to login");
@@ -127,7 +130,17 @@ const options = {
     port: 4000,
     subscriptions: {
         onConnect: async (connectionParams, webSocket) => {
-            currentSubscriptionToken = await subscriptionToken(connectionParams)
+            // currentSubscriptionToken = await subscriptionToken(connectionParams)
+            const jwtWithoutSignature = await subscriptionToken(connectionParams)
+            const splitToken = jwtWithoutSignature.split('.');
+            const headerAndPayload = `${splitToken[0]}.${splitToken[1]}`;
+            // const splitToken = jwtWithoutSignature.split('.');
+            // const headerAndPayload = `${splitToken[0]}.${splitToken[1]}`;
+            await redis.get(`${jwt_decode(headerAndPayload).id}`).then(function (result) {
+                signatureToStitch = JSON.parse(result).signature;
+                currentSubscriptionToken = `${headerAndPayload}${signatureToStitch}`
+            });
+
         },
     },
 };
