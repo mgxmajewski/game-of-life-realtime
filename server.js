@@ -80,7 +80,7 @@ let currentSubscriptionToken;
 let authorisedToken;
 const subscriptionToken = (connectionParams) => connectionParams.Authorization
 
-const verifyToken = (token) => Jwt.verify(token, process.env.ACCESS_SECRET)
+const verifyToken = (token) => Jwt.verify(token, process.env.ACCESS_SECRET, {ignoreExpiration: true})
 
 const authenticate = async (resolve, root, args, context, info) => {
 
@@ -130,17 +130,17 @@ const options = {
     port: 4000,
     subscriptions: {
         onConnect: async (connectionParams, webSocket) => {
-            // currentSubscriptionToken = await subscriptionToken(connectionParams)
-            const jwtWithoutSignature = await subscriptionToken(connectionParams)
-            const splitToken = jwtWithoutSignature.split('.');
-            const headerAndPayload = `${splitToken[0]}.${splitToken[1]}`;
+            console.log('connected')
+            currentSubscriptionToken = await subscriptionToken(connectionParams)
+            // const jwtWithoutSignature = await subscriptionToken(connectionParams)
             // const splitToken = jwtWithoutSignature.split('.');
             // const headerAndPayload = `${splitToken[0]}.${splitToken[1]}`;
-            await redis.get(`${jwt_decode(headerAndPayload).id}`).then(function (result) {
-                signatureToStitch = JSON.parse(result).signature;
-                currentSubscriptionToken = `${headerAndPayload}${signatureToStitch}`
-            });
-
+            // const splitToken = jwtWithoutSignature.split('.');
+            // const headerAndPayload = `${splitToken[0]}.${splitToken[1]}`;
+            // await redis.get(`${jwt_decode(headerAndPayload).id}`).then(function (result) {
+            //     signatureToStitch = JSON.parse(result).signature;
+            //     currentSubscriptionToken = `${headerAndPayload}${signatureToStitch}`
+            // });
         },
     },
 };
