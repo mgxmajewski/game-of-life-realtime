@@ -5,8 +5,9 @@ const {AuthenticationError, gql, ApolloServerPluginInlineTrace} = require("apoll
 const {initialGrid} = require("./utils");
 const Redis = require("ioredis");
 const jwt_decode = require("jwt-decode");
+const {useState} = require("./utils/useState");
 
-const redis = new Redis();
+// const redis = new Redis();
 
 const initialStatesArraySize = 1
 const states = new Array(initialStatesArraySize);
@@ -80,16 +81,17 @@ let currentSubscriptionToken;
 let authorisedToken;
 const subscriptionToken = (connectionParams) => connectionParams.Authorization
 
-const verifyToken = (token) => Jwt.verify(token, process.env.ACCESS_SECRET, {ignoreExpiration: true})
+const verifyToken = (token) => Jwt.verify(token, process.env.ACCESS_SECRET)
 
 const authenticate = async (resolve, root, args, context, info) => {
 
     try {
         if (currentSubscriptionToken) {
-            console.log(`currentSubscriptionToken: ` + currentSubscriptionToken);
+
+            // console.log(`currentSubscriptionToken: ` + currentSubscriptionToken);
             authorisedToken = verifyToken(currentSubscriptionToken)
         } else {
-            console.log("You need to login");
+            // console.log("You need to login");
             return new AuthenticationError("You need to login");
         }
     } catch (e) {
