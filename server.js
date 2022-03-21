@@ -133,6 +133,7 @@ const options = {
     subscriptions: {
         onConnect: async (connectionParams, webSocket) => {
             console.log('connected')
+            console.log(`process.env.ACCESS_SECRET: ` + process.env.ACCESS_SECRET);
             currentSubscriptionToken = await subscriptionToken(connectionParams)
             // const jwtWithoutSignature = await subscriptionToken(connectionParams)
             // const splitToken = jwtWithoutSignature.split('.');
