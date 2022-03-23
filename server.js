@@ -47,7 +47,7 @@ const resolvers = {
     },
     Mutation: {
         postState: async (parent, {grid}, {req, url}) => {
-            console.log(req.body.variables.grid);
+            // console.log(req.body.variables.grid);
             const token = req.headers.authorization
             const {id} = verifyToken(token);
             sessions[id].id = id
